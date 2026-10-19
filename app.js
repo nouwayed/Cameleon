@@ -510,7 +510,13 @@ behaviors.setup = () => {
   const newGame = document.getElementById('new-game-btn');
   if (newGame) {
     newGame.addEventListener('click', () => {
-      if (!confirm('Remettre tous les scores à zéro ?')) return;
+      // Deuxième appui pour confirmer (les boîtes confirm() sont bloquées dans certains navigateurs intégrés)
+      if (!newGame.dataset.armed) {
+        newGame.dataset.armed = '1';
+        newGame.textContent = '⚠️ Appuie encore pour remettre les scores à zéro';
+        newGame.classList.add('text-rose-500');
+        return;
+      }
       resetScores();
       save();
       render();
