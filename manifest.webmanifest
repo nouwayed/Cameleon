@@ -1,0 +1,15 @@
+{
+  "name": "Mission Caméléon",
+  "short_name": "Caméléon",
+  "description": "Le jeu de société où le téléphone donne les ordres… et où l'on joue pour de vrai !",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0fdf4",
+  "theme_color": "#10b981",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
