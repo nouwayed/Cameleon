@@ -1,5 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#10b981"/>
-  <circle cx="256" cy="256" r="190" fill="#34d399"/>
-  <text x="256" y="330" font-size="240" text-anchor="middle" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif">🦎</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#fbbf24"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4ade80"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g transform="translate(512 512) scale(1.12) translate(-510 -575)">
+  <!-- branche -->
+  <rect x="80" y="742" width="864" height="56" rx="28" fill="#92400e"/>
+  <!-- queue enroulée -->
+  <path d="M300 600 C 200 600, 150 520, 190 450 C 230 380, 330 390, 340 460 C 350 520, 280 540, 260 500"
+        fill="none" stroke="url(#skin)" stroke-width="64" stroke-linecap="round"/>
+  <!-- pattes -->
+  <path d="M420 690 L 400 760" stroke="#047857" stroke-width="54" stroke-linecap="round"/>
+  <path d="M640 690 L 660 760" stroke="#047857" stroke-width="54" stroke-linecap="round"/>
+  <!-- corps -->
+  <path d="M290 610 C 300 470, 450 400, 600 410 C 720 418, 800 470, 840 540
+           C 870 600, 830 690, 720 700 L 420 705 C 340 705, 285 670, 290 610 Z" fill="url(#skin)"/>
+  <!-- crête -->
+  <path d="M600 410 C 650 360, 720 360, 760 400" fill="none" stroke="#059669" stroke-width="30" stroke-linecap="round"/>
+  <!-- taches -->
+  <circle cx="470" cy="520" r="34" fill="#facc15" opacity=".9"/>
+  <circle cx="560" cy="600" r="26" fill="#38bdf8" opacity=".9"/>
+  <circle cx="400" cy="620" r="22" fill="#f472b6" opacity=".9"/>
+  <!-- bouche -->
+  <path d="M770 610 C 800 625, 830 615, 845 595" fill="none" stroke="#065f46" stroke-width="14" stroke-linecap="round"/>
+  <!-- oeil -->
+  <circle cx="725" cy="505" r="78" fill="#4ade80" stroke="#059669" stroke-width="14"/>
+  <circle cx="735" cy="505" r="46" fill="#ffffff"/>
+  <circle cx="752" cy="500" r="25" fill="#0f172a"/>
+  <circle cx="760" cy="490" r="8" fill="#ffffff"/>
+  </g>
 </svg>

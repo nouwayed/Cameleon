@@ -1,0 +1,14 @@
+{
+  "appId": "com.nouwayed.missioncameleon",
+  "appName": "Mission Caméléon",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#f0fdf4"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "presentationOptions": []
+    }
+  }
+}

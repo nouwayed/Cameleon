@@ -114,8 +114,63 @@ function go(screen) {
   window.scrollTo({ top: 0 });
 }
 
+/* ---------- Fonctions natives (application iOS via Capacitor) ---------- */
+
+const Cap = window.Capacitor;
+const isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform() && Cap.registerPlugin);
+const Haptics = isNative ? Cap.registerPlugin('Haptics') : null;
+const LocalNotifications = isNative ? Cap.registerPlugin('LocalNotifications') : null;
+const END_NOTIFICATION_ID = 6060;
+
 function vibrate(pattern) {
+  if (Haptics) {
+    // L'iPhone ne sait pas suivre un motif : un retour léger pour les courtes impulsions,
+    // une vraie vibration pour chaque segment « actif » d'un motif.
+    if (typeof pattern === 'number') {
+      Haptics.impact({ style: pattern <= 60 ? 'LIGHT' : 'HEAVY' }).catch(() => {});
+      return;
+    }
+    let at = 0;
+    pattern.forEach((ms, i) => {
+      if (i % 2 === 0) setTimeout(() => Haptics.vibrate().catch(() => {}), at);
+      at += ms;
+    });
+    return;
+  }
   try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (_) { /* ignoré */ }
+}
+
+// Demandée au lancement de la partie plutôt que par-dessus la mission secrète
+async function askNotificationPermission() {
+  if (!LocalNotifications) return;
+  try {
+    const perm = await LocalNotifications.checkPermissions();
+    if (perm.display === 'prompt' || perm.display === 'prompt-with-rationale') {
+      await LocalNotifications.requestPermissions();
+    }
+  } catch (_) { /* pas grave */ }
+}
+
+// Prévient la fin du minuteur même si le téléphone posé face cachée s'est verrouillé
+async function scheduleEndNotification(endsAt) {
+  if (!LocalNotifications) return;
+  try {
+    const perm = await LocalNotifications.checkPermissions();
+    if (perm.display !== 'granted') return;
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: END_NOTIFICATION_ID,
+        title: '⏰ Temps écoulé !',
+        body: 'Détectives, revenez dans la pièce ! Cherchez ce qui a changé !',
+        schedule: { at: new Date(endsAt), allowWhileIdle: true },
+      }],
+    });
+  } catch (_) { /* pas grave */ }
+}
+
+function cancelEndNotification() {
+  if (!LocalNotifications) return;
+  LocalNotifications.cancel({ notifications: [{ id: END_NOTIFICATION_ID }] }).catch(() => {});
 }
 
 async function keepAwake(on) {
@@ -135,6 +190,8 @@ async function keepAwake(on) {
 let audioCtx = null;
 
 function unlockAudio() {
+  // Les bips et l'alarme doivent s'entendre même si l'iPhone est en mode silencieux
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (_) { /* ignoré */ }
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -504,6 +561,7 @@ behaviors.setup = () => {
   document.getElementById('start-btn').addEventListener('click', () => {
     if (state.players.length < 2) return;
     unlockAudio();
+    askNotificationPermission();
     startRound();
   });
 
@@ -559,8 +617,10 @@ behaviors.mission = () => {
 
   sounds.start();
   vibrate(80);
+  scheduleEndNotification(endsAt);
 
   const finish = () => {
+    cancelEndNotification();
     sounds.alarm();
     vibrate([400, 150, 400, 150, 600]);
     keepAwake(false);
@@ -631,7 +691,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+if (!isNative && 'serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });

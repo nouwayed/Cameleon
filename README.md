@@ -24,14 +24,28 @@ python3 -m http.server 8080   # puis ouvrir http://localhost:8080
 
 Sur téléphone, ouvrez l'adresse puis « Ajouter à l'écran d'accueil » pour l'installer comme une application. Après la première visite, le jeu fonctionne hors ligne.
 
+## Application iPhone (App Store)
+
+Le dossier `ios/` contient le projet Xcode prêt à publier (Capacitor), avec vibrations natives, notification de fin de minuteur et son en mode silencieux. Toutes les étapes, et les textes de la fiche App Store, sont dans **[APP_STORE.md](APP_STORE.md)**.
+
+```bash
+npm install
+npm run ios   # prépare www/, synchronise le projet iOS et ouvre Xcode (sur Mac)
+```
+
 ## Structure
 
 | Fichier | Rôle |
 | --- | --- |
 | `index.html` | Page unique, styles d'animation |
-| `app.js` | Toute la logique : écrans, tirage du Caméléon, minuteur, sons (Web Audio), scores, banque de défis |
+| `app.js` | Toute la logique : écrans, tirage du Caméléon, minuteur, sons (Web Audio), scores, banque de défis, fonctions natives iOS |
 | `tailwind.css` | Tailwind CSS compilé (fonctionne hors ligne) |
-| `manifest.webmanifest`, `sw.js`, `icon.svg` | Installation PWA et cache hors ligne |
+| `fonts/` | Police Baloo 2 embarquée (licence OFL) |
+| `manifest.webmanifest`, `sw.js`, `icon*.png`, `icon.svg` | Installation PWA et cache hors ligne |
+| `confidentialite.html` | Politique de confidentialité (exigée par Apple) |
+| `capacitor.config.json`, `ios/`, `scripts/build-www.mjs` | Application iOS |
+| `store/screenshots/` | Captures d'écran pour l'App Store |
+| `resources/icon-1024.png` | Icône source 1024 × 1024 |
 
 ## Modifier le style
 

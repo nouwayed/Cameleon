@@ -1,6 +1,6 @@
 // Service worker : l'app reste jouable hors ligne après la première visite
-const CACHE = 'mission-cameleon-v1';
-const CORE = ['./', 'index.html', 'app.js', 'tailwind.css', 'manifest.webmanifest', 'icon.svg'];
+const CACHE = 'mission-cameleon-v3';
+const CORE = ['./', 'index.html', 'app.js', 'tailwind.css', 'fonts/baloo2.css', 'fonts/baloo2-latin.woff2', 'fonts/baloo2-latin-ext.woff2', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
@@ -15,7 +15,6 @@ self.addEventListener('activate', (event) => {
 });
 
 // Réseau d'abord (pour recevoir les mises à jour), cache en secours.
-// Les ressources externes (polices) sont aussi mises en cache.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
