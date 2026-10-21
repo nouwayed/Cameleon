@@ -11,6 +11,7 @@ Jeu de société **dans la vraie vie** : le téléphone sert uniquement à donne
 5. À la fin, le téléphone sonne et vibre : les Détectives reviennent et cherchent ce qui a changé.
 6. **Un détective a trouvé !** → point pour ce détective. **Temps écoulé** → point pour le Caméléon.
 7. Tableau des scores, puis **Manche suivante**.
+8. Au départ, on choisit **1, 2 ou 3 tours** (un tour = chacun est Caméléon une fois). Après la dernière manche, **écran du vainqueur** avec podium, puis **Rejouer**.
 
 Les joueurs et les scores sont mémorisés sur l'appareil (localStorage) : aucun compte, aucune donnée envoyée.
 

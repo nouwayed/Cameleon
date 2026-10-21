@@ -51,6 +51,15 @@
     }
     .btn-giant:active:not(:disabled) { transform: translateY(6px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
     .btn-giant:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+    .confetti {
+      position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 3px; opacity: .9;
+      animation-name: confettiFall; animation-timing-function: linear; animation-iteration-count: infinite;
+    }
+    @keyframes confettiFall {
+      0%   { transform: translateY(-20px) rotate(0deg); }
+      100% { transform: translateY(110vh) rotate(540deg); }
+    }
+    @media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
     .badge-in { animation: pop .35s cubic-bezier(.2,1.6,.4,1) both; }
     .ring-track { stroke: rgba(255,255,255,.25); }
     .ring-progress { transition: stroke-dashoffset 1s linear, stroke .3s ease; }

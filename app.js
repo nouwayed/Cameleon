@@ -9,6 +9,7 @@ const HIDE_SECONDS = 5;
 const BEEP_EVERY = 15;
 const MAX_PLAYERS = 12;
 const STORAGE_KEY = 'mission-cameleon-v1';
+const TOUR_OPTIONS = [1, 2, 3];   // un tour = chaque joueur est Caméléon une fois
 
 const MISSIONS = [
   { emoji: '🪑', text: 'Inverse la place de deux chaises.' },
@@ -56,6 +57,8 @@ const state = {
   players: [],          // { id, name, colorIndex, score }
   pool: [],             // ids des joueurs pas encore Caméléon dans ce cycle
   round: 0,
+  tours: 1,
+  finished: false,
   chameleonId: null,
   lastChameleonId: null,
   missionIndex: null,
@@ -73,7 +76,8 @@ function load() {
     if (saved && Array.isArray(saved.players)) {
       Object.assign(state, saved);
       // On reprend toujours sur un écran stable
-      state.screen = state.round > 0 && state.players.length >= 2 ? 'scores' : 'setup';
+      if (state.finished) state.screen = 'final';
+      else state.screen = state.round > 0 && state.players.length >= 2 ? 'scores' : 'setup';
       state.lastWinnerId = null;
     }
   } catch (_) { /* stockage indisponible : on démarre à neuf */ }
@@ -100,6 +104,9 @@ const randInt = (n) => Math.floor(Math.random() * n);
 const playerById = (id) => state.players.find((p) => p.id === id);
 const colorOf = (p) => COLORS[p.colorIndex % COLORS.length];
 const avatarOf = (p) => AVATARS[p.colorIndex % AVATARS.length];
+const totalRounds = () => state.tours * state.players.length;
+const isLastRound = () => state.round >= totalRounds();
+const plural = (n, word) => `${n} ${word}${n > 1 ? 's' : ''}`;
 
 function clearTimers() {
   timers.forEach((t) => { clearInterval(t); clearTimeout(t); });
@@ -224,6 +231,10 @@ const sounds = {
     });
   },
   win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.25, 0.15, 'triangle')); },
+  fanfare() {
+    [[523, 0], [523, 0.15], [523, 0.3], [659, 0.45], [784, 0.75], [659, 0.95], [784, 1.1], [1047, 1.3]]
+      .forEach(([f, t], i) => tone(f, t, i === 7 ? 0.7 : 0.2, 0.18, 'triangle'));
+  },
 };
 
 /* ---------- Logique de jeu ---------- */
@@ -238,12 +249,10 @@ function addPlayer(rawName) {
   const used = new Set(state.players.map((p) => p.colorIndex));
   let colorIndex = 0;
   while (used.has(colorIndex) && colorIndex < COLORS.length) colorIndex++;
-  state.players.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    name,
-    colorIndex: colorIndex % COLORS.length,
-    score: 0,
-  });
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  state.players.push({ id, name, colorIndex: colorIndex % COLORS.length, score: 0 });
+  // Arrivé en cours de partie : il sera Caméléon pendant le tour en cours
+  if (state.round > 0) state.pool.push(id);
   save();
   return null;
 }
@@ -293,10 +302,18 @@ function awardPoint(playerId) {
   go('scores');
 }
 
+function finishGame() {
+  state.finished = true;
+  sounds.fanfare();
+  vibrate([100, 60, 100, 60, 300]);
+  go('final');
+}
+
 function resetScores() {
   state.players.forEach((p) => { p.score = 0; });
   state.pool = [];
   state.round = 0;
+  state.finished = false;
   state.chameleonId = null;
   state.lastChameleonId = null;
   state.lastWinnerId = null;
@@ -358,13 +375,31 @@ screens.setup = () => {
       </div>
     </div>
 
+    <div class="mt-4 rounded-[2rem] bg-white p-5 shadow-xl shadow-emerald-900/5">
+      <h2 class="text-center font-display text-2xl font-extrabold text-slate-800">Combien de tours ?</h2>
+      <div class="mt-3 grid grid-cols-3 gap-3" role="radiogroup" aria-label="Nombre de tours">
+        ${TOUR_OPTIONS.map((t) => {
+          const on = t === state.tours;
+          return `
+          <button data-tours="${t}" role="radio" aria-checked="${on}"
+            class="rounded-2xl py-3 font-display text-3xl font-extrabold transition active:scale-95 ${on
+              ? 'bg-amber-400 text-white shadow-lg ring-4 ring-amber-200'
+              : 'bg-amber-50 text-amber-600 ring-2 ring-amber-100'}">${t}</button>`;
+        }).join('')}
+      </div>
+      <p class="mt-3 text-center text-lg font-semibold text-slate-500">
+        Chacun sera Caméléon ${state.tours === 1 ? 'une fois' : `${state.tours} fois`}${n >= 2
+          ? ` → <b class="text-slate-700">${plural(totalRounds(), 'manche')}</b>` : ''}
+      </p>
+    </div>
+
     <div class="mt-auto space-y-3 pt-6">
       <button id="start-btn" ${canStart ? '' : 'disabled'}
         class="btn-giant w-full rounded-[2rem] bg-gradient-to-br from-emerald-400 to-emerald-600 px-6 py-6 font-display text-3xl font-extrabold text-white">
-        ${resuming ? '▶️ Reprendre la partie' : '🚀 Lancer la partie'}
+        ${resuming && !state.finished ? '▶️ Reprendre la partie' : '🚀 Lancer la partie'}
       </button>
       ${!canStart ? `<p class="text-center font-semibold text-slate-500">Encore ${2 - n} joueur${2 - n > 1 ? 's' : ''} à ajouter</p>` : ''}
-      ${resuming ? `<button id="new-game-btn" class="w-full rounded-2xl py-3 text-lg font-bold text-slate-500 underline-offset-4 hover:underline">🔄 Nouvelle partie (scores à zéro)</button>` : ''}
+      ${resuming && !state.finished ? `<button id="new-game-btn" class="w-full rounded-2xl py-3 text-lg font-bold text-slate-500 underline-offset-4 hover:underline">🔄 Nouvelle partie (scores à zéro)</button>` : ''}
       <details class="rounded-2xl bg-white/70 p-4 text-slate-600">
         <summary class="cursor-pointer text-lg font-bold text-slate-700">📖 Comment on joue ?</summary>
         <ol class="mt-2 list-decimal space-y-1 pl-5 text-base font-medium">
@@ -373,6 +408,7 @@ screens.setup = () => {
           <li>Le Caméléon lit sa mission secrète, pose le téléphone face cachée et a <b>60 secondes</b> pour changer un objet dans la pièce.</li>
           <li>Les Détectives reviennent et cherchent ce qui a changé !</li>
           <li>Trouvé ? Point pour le Détective. Sinon, point pour le Caméléon !</li>
+          <li>Quand tout le monde a été Caméléon (autant de tours que choisi), celui qui a le plus de points gagne 🏆</li>
         </ol>
       </details>
     </div>
@@ -384,8 +420,9 @@ screens.reveal = () => {
   const c = colorOf(p);
   return `
   <section class="screen flex flex-1 flex-col">
-    ${header(`Manche ${state.round}`)}
+    ${header(`Manche ${state.round} sur ${totalRounds()}`)}
     <div class="flex flex-1 flex-col items-center justify-center text-center">
+      ${isLastRound() ? `<p class="pop mb-4 rounded-full bg-rose-500 px-5 py-1.5 font-display text-xl font-extrabold text-white shadow-lg">🔥 Dernière manche !</p>` : ''}
       <p class="font-display text-2xl font-bold text-slate-600">Le Caméléon de cette manche est&nbsp;:</p>
       <div class="pop mt-6 grid h-44 w-44 place-items-center rounded-full ${c.bg} text-8xl shadow-2xl ring-8 ${c.ring}">${avatarOf(p)}</div>
       <p class="pop mt-6 break-all font-display text-6xl font-extrabold ${c.text}" style="animation-delay:.15s">${esc(p.name)}&nbsp;!</p>
@@ -494,7 +531,7 @@ screens.scores = () => {
   const medals = ['🥇', '🥈', '🥉'];
   return `
   <section class="screen flex flex-1 flex-col">
-    ${header(state.round ? `Après la manche ${state.round}` : '')}
+    ${header(state.round ? `Après la manche ${state.round} sur ${totalRounds()}` : '')}
     ${winner ? `
       <div class="pop mb-5 rounded-[2rem] ${colorOf(winner).bg} p-5 text-center text-white shadow-xl">
         <div class="text-5xl">${wasChameleon ? '🦎✨' : '🕵️⭐'}</div>
@@ -523,11 +560,71 @@ screens.scores = () => {
     </div>
 
     <div class="mt-auto space-y-3 pt-6">
+      ${isLastRound() ? `
+      <button id="final-btn"
+        class="btn-giant w-full rounded-[2rem] bg-gradient-to-br from-amber-400 to-orange-500 px-6 py-6 font-display text-3xl font-extrabold text-white">
+        🏆 Voir le vainqueur
+      </button>` : `
+      <p class="text-center text-lg font-bold text-slate-500">${totalRounds() - state.round === 1
+        ? '🔥 Plus qu\'une manche !' : `Encore ${plural(totalRounds() - state.round, 'manche')}`}</p>
       <button id="next-btn"
         class="btn-giant w-full rounded-[2rem] bg-gradient-to-br from-emerald-400 to-emerald-600 px-6 py-6 font-display text-3xl font-extrabold text-white">
         ➡️ Manche suivante
-      </button>
+      </button>`}
       <button id="edit-players-btn" class="w-full rounded-2xl py-3 text-lg font-bold text-slate-500">👥 Modifier les joueurs</button>
+    </div>
+  </section>`;
+};
+
+screens.final = () => {
+  const sorted = state.players.slice().sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  const best = sorted.length ? sorted[0].score : 0;
+  const winners = sorted.filter((p) => p.score === best);
+  const names = winners.map((p) => esc(p.name));
+  const title = winners.length === 1
+    ? `Victoire de ${names[0]}&nbsp;!`
+    : `Égalité entre ${names.slice(0, -1).join(', ')} et ${names[names.length - 1]}&nbsp;!`;
+  const confettiColors = ['#f43f5e', '#38bdf8', '#facc15', '#a78bfa', '#34d399', '#fb923c'];
+  const confetti = Array.from({ length: 36 }, (_, i) => `
+    <span class="confetti" style="left:${(i * 37) % 100}%;background:${confettiColors[i % confettiColors.length]};animation-delay:${(i % 12) * 0.25}s;animation-duration:${2.6 + (i % 5) * 0.4}s"></span>`).join('');
+  return `
+  <section class="screen flex flex-1 flex-col">
+    <div class="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">${confetti}</div>
+    <div class="relative z-10 flex flex-1 flex-col">
+      ${header(`Fin de la partie · ${plural(state.round, 'manche')}`)}
+      <div class="flex flex-col items-center text-center">
+        <div class="pop text-8xl">🏆</div>
+        <div class="mt-3 flex flex-wrap justify-center gap-3">
+          ${winners.map((p) => `
+            <div class="pop grid h-28 w-28 place-items-center rounded-full ${colorOf(p).bg} text-6xl shadow-2xl ring-8 ${colorOf(p).ring}">${avatarOf(p)}</div>`).join('')}
+        </div>
+        <h2 class="pop mt-4 break-words font-display text-4xl font-extrabold leading-tight text-amber-500" style="animation-delay:.15s">${title}</h2>
+        <p class="mt-1 text-xl font-bold text-slate-500">avec ${plural(best, 'point')}</p>
+      </div>
+
+      <div class="mt-5 rounded-[2rem] bg-white p-4 shadow-xl shadow-emerald-900/5">
+        <ol class="space-y-2">
+          ${sorted.map((p) => {
+            const c = colorOf(p);
+            const rank = sorted.findIndex((q) => q.score === p.score) + 1;
+            return `
+            <li class="flex items-center gap-3 rounded-2xl ${p.score === best ? `${c.soft} ring-4 ${c.ring}` : 'bg-slate-50'} p-2 pr-4">
+              <span class="w-8 text-center text-2xl">${['🥇', '🥈', '🥉'][rank - 1] || ''}</span>
+              <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full ${c.bg} text-2xl">${avatarOf(p)}</span>
+              <span class="min-w-0 flex-1 truncate font-display text-2xl font-bold">${esc(p.name)}</span>
+              <span class="font-display text-3xl font-extrabold ${c.text} tabular-nums">${p.score}</span>
+            </li>`;
+          }).join('')}
+        </ol>
+      </div>
+
+      <div class="mt-auto space-y-3 pt-6">
+        <button id="replay-btn"
+          class="btn-giant w-full rounded-[2rem] bg-gradient-to-br from-emerald-400 to-emerald-600 px-6 py-6 font-display text-3xl font-extrabold text-white">
+          🔁 Rejouer
+        </button>
+        <button id="change-players-btn" class="w-full rounded-2xl py-3 text-lg font-bold text-slate-500">👥 Changer les joueurs</button>
+      </div>
     </div>
   </section>`;
 };
@@ -558,10 +655,21 @@ behaviors.setup = () => {
     btn.addEventListener('click', () => { removePlayer(btn.dataset.remove); render(); });
   });
 
+  $app.querySelectorAll('[data-tours]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.tours = Number(btn.dataset.tours);
+      save();
+      render();
+    });
+  });
+
   document.getElementById('start-btn').addEventListener('click', () => {
     if (state.players.length < 2) return;
     unlockAudio();
     askNotificationPermission();
+    if (state.finished) resetScores();
+    // Joueurs retirés en cours de route : la partie peut déjà être terminée
+    if (state.round > 0 && isLastRound()) { finishGame(); return; }
     startRound();
   });
 
@@ -665,12 +773,29 @@ behaviors.pickDetective = () => {
 };
 
 behaviors.scores = () => {
-  document.getElementById('next-btn').addEventListener('click', () => {
+  const next = document.getElementById('next-btn');
+  if (next) {
+    next.addEventListener('click', () => {
+      unlockAudio();
+      if (state.players.length < 2) { go('setup'); return; }
+      startRound();
+    });
+  }
+  const final = document.getElementById('final-btn');
+  if (final) final.addEventListener('click', finishGame);
+  document.getElementById('edit-players-btn').addEventListener('click', () => go('setup'));
+};
+
+behaviors.final = () => {
+  document.getElementById('replay-btn').addEventListener('click', () => {
     unlockAudio();
-    if (state.players.length < 2) { go('setup'); return; }
+    resetScores();
     startRound();
   });
-  document.getElementById('edit-players-btn').addEventListener('click', () => go('setup'));
+  document.getElementById('change-players-btn').addEventListener('click', () => {
+    resetScores();
+    go('setup');
+  });
 };
 
 /* ---------- Rendu ---------- */
