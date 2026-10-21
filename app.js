@@ -68,7 +68,7 @@ const state = {
   room: null,              // objets repérés sur la photo : { objects: [{ cls, count }] } (la photo n'est jamais enregistrée)
   usedMissionTexts: [],
   lastWinnerId: null,
-  screen: 'setup',
+  screen: 'home',
 };
 
 let timers = [];
@@ -83,7 +83,7 @@ function load() {
       Object.assign(state, saved);
       // On reprend toujours sur un écran stable
       if (state.finished) state.screen = 'final';
-      else state.screen = state.round > 0 && state.players.length >= 2 ? 'scores' : 'setup';
+      else state.screen = state.round > 0 && state.players.length >= 2 ? 'scores' : 'home';
       state.lastWinnerId = null;
     }
   } catch (_) { /* stockage indisponible : on démarre à neuf */ }
@@ -384,9 +384,56 @@ function header(subtitle = '') {
     </header>`;
 }
 
+/* ---------- Modes de jeu ---------- */
+
+const MODES = {
+  surprise: {
+    emoji: '🎲', title: 'Mode Classique', short: 'Classique',
+    pitch: 'Des missions surprises pour changer un objet n\'importe où dans la pièce.',
+    steps: ['Le téléphone pioche une mission', 'Le Caméléon a 60 s pour la faire', 'Les Détectives cherchent'],
+    card: 'from-emerald-400 to-emerald-600', chip: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+  },
+  photo: {
+    emoji: '📸', title: 'Mode Photo', short: 'Photo',
+    pitch: 'Le Caméléon photographie la pièce : l\'appli repère les objets et invente une mission avec eux.',
+    steps: ['Photo de la pièce', 'Mission sur mesure avec ses objets', 'La photo reste sur le téléphone'],
+    card: 'from-sky-400 to-blue-600', chip: 'bg-sky-50 text-sky-700 ring-sky-100',
+  },
+};
+const currentMode = () => MODES[state.missionMode] || MODES.surprise;
+
 /* ---------- Écrans ---------- */
 
 const screens = {};
+
+screens.home = () => `
+  <section class="screen flex flex-1 flex-col">
+    <div class="flex flex-col items-center pt-2 text-center">
+      <span class="wiggle inline-block text-6xl">🦎</span>
+      <h1 class="font-display text-4xl font-extrabold leading-none text-emerald-600">Mission Caméléon</h1>
+      <p class="mt-1 max-w-xs text-base font-semibold text-emerald-700/70">Le téléphone donne les ordres, on joue pour de vrai !</p>
+    </div>
+
+    <h2 class="mt-4 text-center font-display text-3xl font-extrabold text-slate-800">Choisis ton mode de jeu</h2>
+    <div class="mt-3 grid gap-4">
+      ${Object.entries(MODES).map(([key, m]) => `
+        <button data-mode="${key}"
+          class="btn-giant relative w-full rounded-[2rem] bg-gradient-to-br ${m.card} p-4 text-left text-white">
+          ${key === 'photo' ? '<span class="absolute right-4 top-4 rounded-full bg-yellow-300 px-3 py-0.5 text-sm font-extrabold uppercase tracking-wide text-amber-800">Nouveau</span>' : ''}
+          <span class="flex items-center gap-3">
+            <span class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/90 text-3xl">${m.emoji}</span>
+            <span class="font-display text-3xl font-extrabold leading-none">${m.title}</span>
+          </span>
+          <span class="mt-2 block text-base font-semibold leading-snug text-white/95">${m.pitch}</span>
+          <span class="mt-2 flex flex-wrap gap-1.5">
+            ${m.steps.map((st) => `<span class="rounded-full bg-white/20 px-2.5 py-0.5 text-sm font-bold">${st}</span>`).join('')}
+          </span>
+        </button>`).join('')}
+    </div>
+    ${state.round > 0 && !state.finished ? `
+      <p class="mt-4 text-center text-base font-semibold text-slate-500">Une partie est en cours : elle continuera avec le mode choisi.</p>` : ''}
+  </section>`;
+
 
 screens.setup = () => {
   const n = state.players.length;
@@ -395,6 +442,11 @@ screens.setup = () => {
   return `
   <section class="screen flex flex-1 flex-col">
     ${header('Le téléphone donne les ordres, on joue pour de vrai !')}
+
+    <div class="mb-4 flex items-center justify-between gap-3 rounded-full px-2 py-2 pl-4 ring-2 ${currentMode().chip}">
+      <span class="font-display text-xl font-extrabold">${currentMode().emoji} ${currentMode().title}</span>
+      <button id="change-mode-btn" class="rounded-full bg-white px-4 py-1.5 text-base font-bold shadow-sm active:scale-95">Changer</button>
+    </div>
 
     <div class="rounded-[2rem] bg-white p-5 shadow-xl shadow-emerald-900/5">
       <h2 class="text-center font-display text-3xl font-extrabold text-slate-800">Qui joue aujourd'hui ?</h2>
@@ -412,27 +464,6 @@ screens.setup = () => {
           ? `<p class="self-center text-center text-lg font-semibold text-slate-400">Ajoute au moins 2 joueurs 👨‍👩‍👧‍👦</p>`
           : state.players.map((p) => playerBadge(p, { removable: true })).join('')}
       </div>
-    </div>
-
-    <div class="mt-4 rounded-[2rem] bg-white p-5 shadow-xl shadow-emerald-900/5">
-      <h2 class="text-center font-display text-2xl font-extrabold text-slate-800">Quelles missions ?</h2>
-      <div class="mt-3 grid grid-cols-2 gap-3" role="radiogroup" aria-label="Type de missions">
-        ${[['surprise', '🎲', 'Surprises'], ['photo', '📸', 'Photo de la pièce']].map(([mode, emoji, label]) => {
-          const on = state.missionMode === mode;
-          return `
-          <button data-mode="${mode}" role="radio" aria-checked="${on}"
-            class="flex flex-col items-center rounded-2xl px-2 py-3 font-display text-lg font-extrabold leading-tight transition active:scale-95 ${on
-              ? 'bg-violet-500 text-white shadow-lg ring-4 ring-violet-200'
-              : 'bg-violet-50 text-violet-600 ring-2 ring-violet-100'}">
-            <span class="text-4xl">${emoji}</span>${label}
-          </button>`;
-        }).join('')}
-      </div>
-      <p class="mt-3 text-center text-base font-semibold text-slate-500">
-        ${state.missionMode === 'photo'
-          ? 'Le Caméléon photographie la pièce : l\'appli repère les objets et invente une mission avec eux. La photo reste sur le téléphone.'
-          : 'Des missions piochées au hasard parmi les défis de la maison.'}
-      </p>
     </div>
 
     <div class="mt-4 rounded-[2rem] bg-white p-5 shadow-xl shadow-emerald-900/5">
@@ -535,7 +566,7 @@ screens.reveal = () => {
   const waitingPhoto = withPhoto && (!state.room || scan.status !== 'idle');
   return `
   <section class="screen flex flex-1 flex-col">
-    ${header(`Manche ${state.round} sur ${totalRounds()}`)}
+    ${header(`${currentMode().emoji} ${currentMode().short} · Manche ${state.round} sur ${totalRounds()}`)}
     <div class="flex flex-1 flex-col items-center justify-center text-center">
       ${isLastRound() ? `<p class="pop mb-4 rounded-full bg-rose-500 px-5 py-1.5 font-display text-xl font-extrabold text-white shadow-lg">🔥 Dernière manche !</p>` : ''}
       <p class="font-display text-2xl font-bold text-slate-600">Le Caméléon de cette manche est&nbsp;:</p>
@@ -648,7 +679,7 @@ screens.scores = () => {
   const medals = ['🥇', '🥈', '🥉'];
   return `
   <section class="screen flex flex-1 flex-col">
-    ${header(state.round ? `Après la manche ${state.round} sur ${totalRounds()}` : '')}
+    ${header(state.round ? `${currentMode().emoji} ${currentMode().short} · Après la manche ${state.round} sur ${totalRounds()}` : '')}
     ${winner ? `
       <div class="pop mb-5 rounded-[2rem] ${colorOf(winner).bg} p-5 text-center text-white shadow-xl">
         <div class="text-5xl">${wasChameleon ? '🦎✨' : '🕵️⭐'}</div>
@@ -708,7 +739,7 @@ screens.final = () => {
   <section class="screen flex flex-1 flex-col">
     <div class="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">${confetti}</div>
     <div class="relative z-10 flex flex-1 flex-col">
-      ${header(`Fin de la partie · ${plural(state.round, 'manche')}`)}
+      ${header(`${currentMode().emoji} ${currentMode().short} · Fin de la partie · ${plural(state.round, 'manche')}`)}
       <div class="flex flex-col items-center text-center">
         <div class="pop text-8xl">🏆</div>
         <div class="mt-3 flex flex-wrap justify-center gap-3">
@@ -740,7 +771,10 @@ screens.final = () => {
           class="btn-giant w-full rounded-[2rem] bg-gradient-to-br from-emerald-400 to-emerald-600 px-6 py-6 font-display text-3xl font-extrabold text-white">
           🔁 Rejouer
         </button>
-        <button id="change-players-btn" class="w-full rounded-2xl py-3 text-lg font-bold text-slate-500">👥 Changer les joueurs</button>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="change-players-btn" class="rounded-2xl py-3 text-lg font-bold text-slate-500">👥 Changer les joueurs</button>
+          <button id="change-mode-btn" class="rounded-2xl py-3 text-lg font-bold text-slate-500">🎮 Changer de mode</button>
+        </div>
       </div>
     </div>
   </section>`;
@@ -749,6 +783,17 @@ screens.final = () => {
 /* ---------- Comportements par écran ---------- */
 
 const behaviors = {};
+
+behaviors.home = () => {
+  $app.querySelectorAll('[data-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.missionMode = btn.dataset.mode;
+      // Prépare la reconnaissance d'objets en avance pour que la première photo soit rapide
+      if (state.missionMode === 'photo' && window.RoomScan) window.RoomScan.loadModel().catch(() => {});
+      go('setup');
+    });
+  });
+};
 
 behaviors.setup = () => {
   const form = document.getElementById('add-form');
@@ -772,15 +817,7 @@ behaviors.setup = () => {
     btn.addEventListener('click', () => { removePlayer(btn.dataset.remove); render(); });
   });
 
-  $app.querySelectorAll('[data-mode]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      state.missionMode = btn.dataset.mode;
-      save();
-      render();
-      // Prépare la reconnaissance d'objets en avance pour que la première photo soit rapide
-      if (state.missionMode === 'photo' && window.RoomScan) window.RoomScan.loadModel().catch(() => {});
-    });
-  });
+  document.getElementById('change-mode-btn').addEventListener('click', () => go('home'));
 
   $app.querySelectorAll('[data-tours]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -942,6 +979,10 @@ behaviors.final = () => {
   document.getElementById('change-players-btn').addEventListener('click', () => {
     resetScores();
     go('setup');
+  });
+  document.getElementById('change-mode-btn').addEventListener('click', () => {
+    resetScores();
+    go('home');
   });
 };
 

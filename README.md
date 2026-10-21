@@ -4,6 +4,7 @@ Jeu de société **dans la vraie vie** : le téléphone sert uniquement à donne
 
 ## Comment jouer
 
+0. **Choisis ton mode de jeu** : 🎲 **Mode Classique** (missions surprises) ou 📸 **Mode Photo** (missions inventées à partir d'une photo de la pièce).
 1. **Qui joue aujourd'hui ?** — ajoutez les prénoms (2 joueurs minimum).
 2. Le téléphone tire au sort le **Caméléon** de la manche (chacun passe une fois avant qu'un joueur soit de nouveau tiré).
 3. Le Caméléon appuie sur **« Découvrir ma mission secrète »** : pendant 5 s, les **Détectives** sortent de la pièce et ferment les yeux.
@@ -11,7 +12,7 @@ Jeu de société **dans la vraie vie** : le téléphone sert uniquement à donne
 5. À la fin, le téléphone sonne et vibre : les Détectives reviennent et cherchent ce qui a changé.
 6. **Un détective a trouvé !** → point pour ce détective. **Temps écoulé** → point pour le Caméléon.
 7. Tableau des scores, puis **Manche suivante**.
-8. **Missions « Photo de la pièce »** (au choix) : le Caméléon photographie la pièce, l'appli repère les objets (chaise, canapé, plante, peluche, livre…) **directement sur le téléphone** et invente une mission avec eux. La photo n'est jamais envoyée ni enregistrée.
+8. **Mode Photo** : le Caméléon photographie la pièce, l'appli repère les objets (chaise, canapé, plante, peluche, livre…) **directement sur le téléphone** et invente une mission avec eux. La photo n'est jamais envoyée ni enregistrée.
 9. Au départ, on choisit **1, 2 ou 3 tours** (un tour = chacun est Caméléon une fois). Après la dernière manche, **écran du vainqueur** avec podium, puis **Rejouer**.
 
 Les joueurs et les scores sont mémorisés sur l'appareil (localStorage) : aucun compte, aucune donnée envoyée.

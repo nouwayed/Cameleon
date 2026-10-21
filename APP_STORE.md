@@ -55,7 +55,7 @@ L'icône, l'écran de démarrage, le nom affiché (« Mission Caméléon »), l'
 - [ ] Le téléphone vibre aux bips et à la fin.
 - [ ] Mission lancée, **verrouille le téléphone** : au bout de 60 s, la notification « Temps écoulé » arrive.
 - [ ] En rouvrant l'application, l'écran « Détectives, revenez dans la pièce ! » est affiché.
-- [ ] Mode **Photo de la pièce** : l'appli demande l'accès à l'appareil photo, repère des objets (chaise, canapé, plante…) et propose une mission qui les utilise.
+- [ ] **Mode Photo** (premier écran) : l'appli demande l'accès à l'appareil photo, repère des objets (chaise, canapé, plante…) et propose une mission qui les utilise.
 
 ## 5. Créer la fiche sur App Store Connect
 
@@ -84,6 +84,10 @@ Le téléphone donne les ordres, puis on le pose : toute la famille joue pour de
 **Description** :
 ```
 Mission Caméléon, c'est le jeu de société où le téléphone ne sert qu'à donner les ordres… puis on le pose et on joue pour de vrai, en famille, dans la maison !
+
+DEUX MODES DE JEU
+• Mode Classique : des missions surprises pour toute la maison.
+• Mode Photo : le Caméléon photographie la pièce, l'appli repère les objets et invente une mission sur mesure avec eux. La photo est analysée sur le téléphone et n'est jamais envoyée.
 
 COMMENT ON JOUE ?
 • Le téléphone choisit au hasard le Caméléon de la manche.
@@ -131,7 +135,7 @@ Réponds **« Aucun »** à toutes les questions (pas de violence, pas de conten
 
 ### Captures d'écran
 
-Six captures au format **iPhone 6,9 pouces (1320 × 2868)** sont prêtes dans `store/screenshots/`. Glisse-les dans l'ordre dans la section **iPhone 6,9"**. Comme l'app n'est disponible que sur iPhone, aucune capture iPad n'est demandée.
+Sept captures au format **iPhone 6,9 pouces (1320 × 2868)** sont prêtes dans `store/screenshots/`. Glisse-les dans l'ordre dans la section **iPhone 6,9"**. Comme l'app n'est disponible que sur iPhone, aucune capture iPad n'est demandée.
 
 Tu peux aussi faire tes propres captures dans le **Simulateur iPhone 16 Pro Max** d'Xcode (`Cmd + S` dans le simulateur).
 
@@ -143,7 +147,7 @@ Mission Caméléon est un jeu de société familial joué dans la vraie vie. L'a
 
 Pour tester : ajoutez 2 prénoms, touchez « Lancer la partie », puis « Découvrir ma mission secrète ». Le bouton « J'ai fini avant la fin » permet de passer le minuteur.
 
-Mode « Photo de la pièce » (choix « Quelles missions ? » sur le premier écran) : l'appareil photo sert à repérer les objets de la pièce, entièrement sur l'appareil (TensorFlow.js), pour inventer une mission. Aucune photo n'est envoyée ni enregistrée.
+Mode Photo (deuxième mode de jeu, sur le premier écran) : l'appareil photo sert à repérer les objets de la pièce, entièrement sur l'appareil (TensorFlow.js), pour inventer une mission. Aucune photo n'est envoyée ni enregistrée.
 
 Fonctions natives utilisées : appareil photo, notification locale à la fin du minuteur (le téléphone est posé face cachée et peut se verrouiller), retour haptique, son en mode silencieux. Aucun compte, aucune donnée collectée, fonctionne hors ligne.
 ```
