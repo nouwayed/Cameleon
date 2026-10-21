@@ -63,12 +63,18 @@ const state = {
   lastChameleonId: null,
   missionIndex: null,
   lastMissionIndices: [],
+  mission: null,           // { emoji, text, fromPhoto? }
+  missionMode: 'surprise', // 'surprise' | 'photo'
+  room: null,              // objets repérés sur la photo : { objects: [{ cls, count }] } (la photo n'est jamais enregistrée)
+  usedMissionTexts: [],
   lastWinnerId: null,
   screen: 'setup',
 };
 
 let timers = [];
 let wakeLock = null;
+// Aperçu de la dernière photo, gardé en mémoire seulement le temps de la partie
+const scan = { status: 'idle', url: null, boxes: [], ratio: 4 / 3, skipRound: 0 };
 
 function load() {
   try {
@@ -282,6 +288,7 @@ function pickMission() {
   if (candidates.length === 0) candidates = MISSIONS.map((_, i) => i);
   const idx = candidates[randInt(candidates.length)];
   state.missionIndex = idx;
+  state.mission = MISSIONS[idx];
   state.lastMissionIndices = [idx, ...recent].slice(0, Math.min(8, MISSIONS.length - 1));
 }
 
@@ -302,6 +309,37 @@ function awardPoint(playerId) {
   go('scores');
 }
 
+const photoMode = () => state.missionMode === 'photo' && !!window.RoomScan;
+const roomReady = () => !!(state.room && state.room.objects.length);
+
+function choosePhotoMission() {
+  if (!photoMode() || !roomReady() || scan.skipRound === state.round) return;
+  const m = window.RoomScan.generateMission(state.room, state.usedMissionTexts);
+  if (!m) return;
+  state.mission = m;
+  state.usedMissionTexts = [...state.usedMissionTexts, m.text].slice(-40);
+}
+
+async function analyzeRoomPhoto(file) {
+  if (!file) return;
+  if (scan.url) URL.revokeObjectURL(scan.url);
+  scan.status = 'loading';
+  scan.url = null;
+  render();
+  try {
+    const result = await window.RoomScan.analyze(file);
+    Object.assign(scan, { status: 'idle', url: result.url, boxes: result.boxes, ratio: result.ratio });
+    state.room = { objects: result.objects };
+    sounds.win();
+    vibrate(60);
+  } catch (err) {
+    console.warn(err);
+    scan.status = 'error';
+  }
+  save();
+  if (state.screen === 'reveal') render();
+}
+
 function finishGame() {
   state.finished = true;
   sounds.fanfare();
@@ -314,6 +352,7 @@ function resetScores() {
   state.pool = [];
   state.round = 0;
   state.finished = false;
+  state.usedMissionTexts = [];
   state.chameleonId = null;
   state.lastChameleonId = null;
   state.lastWinnerId = null;
@@ -376,6 +415,27 @@ screens.setup = () => {
     </div>
 
     <div class="mt-4 rounded-[2rem] bg-white p-5 shadow-xl shadow-emerald-900/5">
+      <h2 class="text-center font-display text-2xl font-extrabold text-slate-800">Quelles missions ?</h2>
+      <div class="mt-3 grid grid-cols-2 gap-3" role="radiogroup" aria-label="Type de missions">
+        ${[['surprise', '🎲', 'Surprises'], ['photo', '📸', 'Photo de la pièce']].map(([mode, emoji, label]) => {
+          const on = state.missionMode === mode;
+          return `
+          <button data-mode="${mode}" role="radio" aria-checked="${on}"
+            class="flex flex-col items-center rounded-2xl px-2 py-3 font-display text-lg font-extrabold leading-tight transition active:scale-95 ${on
+              ? 'bg-violet-500 text-white shadow-lg ring-4 ring-violet-200'
+              : 'bg-violet-50 text-violet-600 ring-2 ring-violet-100'}">
+            <span class="text-4xl">${emoji}</span>${label}
+          </button>`;
+        }).join('')}
+      </div>
+      <p class="mt-3 text-center text-base font-semibold text-slate-500">
+        ${state.missionMode === 'photo'
+          ? 'Le Caméléon photographie la pièce : l\'appli repère les objets et invente une mission avec eux. La photo reste sur le téléphone.'
+          : 'Des missions piochées au hasard parmi les défis de la maison.'}
+      </p>
+    </div>
+
+    <div class="mt-4 rounded-[2rem] bg-white p-5 shadow-xl shadow-emerald-900/5">
       <h2 class="text-center font-display text-2xl font-extrabold text-slate-800">Combien de tours ?</h2>
       <div class="mt-3 grid grid-cols-3 gap-3" role="radiogroup" aria-label="Nombre de tours">
         ${TOUR_OPTIONS.map((t) => {
@@ -415,23 +475,80 @@ screens.setup = () => {
   </section>`;
 };
 
+function roomPhotoBlock() {
+  const input = `<input id="room-photo" type="file" accept="image/*" capture="environment" class="sr-only" />`;
+  const shootBtn = (label, big) => `
+    <label for="room-photo" class="${big
+      ? 'btn-giant flex w-full cursor-pointer items-center justify-center gap-2 rounded-[2rem] bg-gradient-to-br from-sky-400 to-blue-600 px-6 py-6 font-display text-3xl font-extrabold text-white'
+      : 'inline-block cursor-pointer rounded-full bg-sky-50 px-4 py-2 text-base font-bold text-sky-600 ring-2 ring-sky-100 active:scale-95'}">${label}</label>`;
+
+  if (scan.status === 'loading') {
+    return `
+    <div class="w-full rounded-[2rem] bg-white p-6 text-center shadow-xl">
+      <div class="wiggle inline-block text-6xl">🔍</div>
+      <p class="mt-2 font-display text-2xl font-extrabold text-slate-700">J'observe la pièce…</p>
+      <p class="text-base font-semibold text-slate-400">La première fois, ça peut prendre quelques secondes.</p>
+    </div>`;
+  }
+  if (scan.status === 'error') {
+    return `${input}
+    <div class="w-full rounded-[2rem] bg-white p-5 text-center shadow-xl">
+      <p class="font-display text-2xl font-extrabold text-rose-500">Oups, je n'ai pas pu regarder la photo 😕</p>
+      <div class="mt-3 flex flex-wrap justify-center gap-2">${shootBtn('📸 Réessayer')}
+        <button id="skip-photo-btn" class="rounded-full bg-slate-100 px-4 py-2 text-base font-bold text-slate-600 active:scale-95">🎲 Mission surprise</button>
+      </div>
+    </div>`;
+  }
+  if (!state.room) {
+    return `${input}
+    <div class="w-full space-y-3">
+      <p class="text-lg font-bold text-slate-600">Avant de commencer, prends toute la pièce en photo&nbsp;: je vais inventer ta mission avec ce que je vois&nbsp;!</p>
+      ${shootBtn('📸 Photographier la pièce', true)}
+      <button id="skip-photo-btn" class="w-full py-2 text-base font-bold text-slate-500">🎲 Jouer sans photo cette fois</button>
+    </div>`;
+  }
+  const items = state.room.objects.map(({ cls, count }) => {
+    const d = window.RoomScan.describe(cls);
+    return d ? `<span class="rounded-full bg-emerald-50 px-3 py-1 text-base font-bold text-emerald-700 ring-2 ring-emerald-100">${d.emoji} ${esc(d.name)}${count > 1 ? ` ×${count}` : ''}</span>` : '';
+  }).join('');
+  const preview = scan.url ? `
+    <div class="relative mx-auto w-full overflow-hidden rounded-2xl" style="aspect-ratio:${scan.ratio};max-height:9rem;max-width:${9 * scan.ratio}rem">
+      <img src="${scan.url}" alt="Photo de la pièce" class="h-full w-full object-cover" />
+      ${scan.boxes.map((b) => `<span class="absolute rounded-md border-[3px] border-yellow-300 shadow" style="left:${b.left}%;top:${b.top}%;width:${b.width}%;height:${b.height}%"></span>`).join('')}
+    </div>` : '';
+  return `${input}
+    <div class="w-full rounded-[2rem] bg-white p-4 text-center shadow-xl">
+      ${preview}
+      ${roomReady() ? `
+        <p class="mt-2 font-display text-xl font-extrabold text-slate-700">J'ai repéré :</p>
+        <div class="mt-1 flex flex-wrap justify-center gap-2">${items}</div>` : `
+        <p class="mt-2 font-display text-xl font-extrabold text-slate-700">Je n'ai reconnu aucun objet 🤔</p>
+        <p class="text-base font-semibold text-slate-500">Essaie une photo plus large et bien éclairée. Sinon, ce sera une mission surprise.</p>`}
+      <div class="mt-3">${shootBtn('📸 Nouvelle photo')}</div>
+    </div>`;
+}
+
 screens.reveal = () => {
   const p = playerById(state.chameleonId);
   const c = colorOf(p);
+  const withPhoto = photoMode() && scan.skipRound !== state.round;
+  const waitingPhoto = withPhoto && (!state.room || scan.status !== 'idle');
   return `
   <section class="screen flex flex-1 flex-col">
     ${header(`Manche ${state.round} sur ${totalRounds()}`)}
     <div class="flex flex-1 flex-col items-center justify-center text-center">
       ${isLastRound() ? `<p class="pop mb-4 rounded-full bg-rose-500 px-5 py-1.5 font-display text-xl font-extrabold text-white shadow-lg">🔥 Dernière manche !</p>` : ''}
       <p class="font-display text-2xl font-bold text-slate-600">Le Caméléon de cette manche est&nbsp;:</p>
-      <div class="pop mt-6 grid h-44 w-44 place-items-center rounded-full ${c.bg} text-8xl shadow-2xl ring-8 ${c.ring}">${avatarOf(p)}</div>
-      <p class="pop mt-6 break-all font-display text-6xl font-extrabold ${c.text}" style="animation-delay:.15s">${esc(p.name)}&nbsp;!</p>
-      <p class="mt-4 max-w-xs text-lg font-semibold text-slate-500">${esc(p.name)}, prends le téléphone. Les autres, vous êtes les <b>Détectives</b> 🕵️</p>
+      <div class="pop ${withPhoto ? 'mt-2 h-20 w-20 text-5xl ring-4' : 'mt-6 h-44 w-44 text-8xl ring-8'} grid place-items-center rounded-full ${c.bg} shadow-2xl ${c.ring}">${avatarOf(p)}</div>
+      <p class="pop ${withPhoto ? 'mt-2 text-4xl' : 'mt-6 text-6xl'} break-all font-display font-extrabold ${c.text}" style="animation-delay:.15s">${esc(p.name)}&nbsp;!</p>
+      <p class="mt-2 max-w-xs ${withPhoto ? 'text-base' : 'text-lg'} font-semibold text-slate-500">${esc(p.name)}, prends le téléphone. Les autres, vous êtes les <b>Détectives</b> 🕵️</p>
+      ${withPhoto ? `<div class="mt-3 w-full">${roomPhotoBlock()}</div>` : ''}
     </div>
+    ${waitingPhoto ? '' : `
     <button id="discover-btn"
-      class="btn-giant mt-6 w-full rounded-[2rem] bg-gradient-to-br from-violet-500 to-fuchsia-500 px-6 py-7 font-display text-3xl font-extrabold text-white">
+      class="btn-giant ${withPhoto ? 'mt-4 py-5' : 'mt-6 py-7'} w-full rounded-[2rem] bg-gradient-to-br from-violet-500 to-fuchsia-500 px-6 font-display text-3xl font-extrabold text-white">
       🤫 Découvrir ma mission secrète
-    </button>
+    </button>`}
   </section>`;
 };
 
@@ -447,13 +564,13 @@ screens.hide = () => `
   </section>`;
 
 screens.mission = () => {
-  const m = MISSIONS[state.missionIndex];
+  const m = state.mission;
   const R = 88;
   const C = 2 * Math.PI * R;
   return `
   <section class="screen safe-pad fixed inset-0 z-10 overflow-y-auto bg-gradient-to-b from-emerald-500 to-teal-600 px-5 text-white">
     <div class="mx-auto flex min-h-full max-w-md flex-col">
-    <p class="text-center text-lg font-bold uppercase tracking-widest text-emerald-100">🤫 Mission secrète</p>
+    <p class="text-center text-lg font-bold uppercase tracking-widest text-emerald-100">${m.fromPhoto ? '📸 Mission de ta pièce' : '🤫 Mission secrète'}</p>
     <div class="pop mt-4 rounded-[2rem] bg-white p-6 text-center text-slate-800 shadow-2xl">
       <div class="text-7xl">${m.emoji}</div>
       <p class="mt-3 font-display text-3xl font-extrabold leading-tight">${esc(m.text)}</p>
@@ -655,6 +772,16 @@ behaviors.setup = () => {
     btn.addEventListener('click', () => { removePlayer(btn.dataset.remove); render(); });
   });
 
+  $app.querySelectorAll('[data-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.missionMode = btn.dataset.mode;
+      save();
+      render();
+      // Prépare la reconnaissance d'objets en avance pour que la première photo soit rapide
+      if (state.missionMode === 'photo' && window.RoomScan) window.RoomScan.loadModel().catch(() => {});
+    });
+  });
+
   $app.querySelectorAll('[data-tours]').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.tours = Number(btn.dataset.tours);
@@ -691,11 +818,31 @@ behaviors.setup = () => {
 };
 
 behaviors.reveal = () => {
-  document.getElementById('discover-btn').addEventListener('click', () => {
-    unlockAudio();
-    keepAwake(true);
-    go('hide');
-  });
+  const discover = document.getElementById('discover-btn');
+  if (discover) {
+    discover.addEventListener('click', () => {
+      unlockAudio();
+      keepAwake(true);
+      choosePhotoMission();
+      go('hide');
+    });
+  }
+  const photo = document.getElementById('room-photo');
+  if (photo) {
+    photo.addEventListener('change', () => {
+      unlockAudio();
+      analyzeRoomPhoto(photo.files && photo.files[0]);
+    });
+  }
+  const skip = document.getElementById('skip-photo-btn');
+  if (skip) {
+    skip.addEventListener('click', () => {
+      scan.skipRound = state.round;
+      scan.status = 'idle';
+      render();
+    });
+  }
+  if (photoMode() && !state.room) window.RoomScan.loadModel().catch(() => {});
 };
 
 behaviors.hide = () => {
@@ -803,7 +950,7 @@ behaviors.final = () => {
 function render() {
   // Sécurité : un écran de manche sans Caméléon valide renvoie à la configuration
   const inRound = ['reveal', 'hide', 'mission', 'search', 'pickDetective'].includes(state.screen);
-  if (inRound && (!playerById(state.chameleonId) || state.missionIndex == null)) state.screen = 'setup';
+  if (inRound && (!playerById(state.chameleonId) || !state.mission)) state.screen = 'setup';
 
   $app.innerHTML = screens[state.screen]();
   behaviors[state.screen]();

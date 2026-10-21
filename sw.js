@@ -1,6 +1,6 @@
 // Service worker : l'app reste jouable hors ligne après la première visite
-const CACHE = 'mission-cameleon-v3';
-const CORE = ['./', 'index.html', 'app.js', 'tailwind.css', 'fonts/baloo2.css', 'fonts/baloo2-latin.woff2', 'fonts/baloo2-latin-ext.woff2', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
+const CACHE = 'mission-cameleon-v4';
+const CORE = ['./', 'index.html', 'app.js', 'photo.js', 'tailwind.css', 'fonts/baloo2.css', 'fonts/baloo2-latin.woff2', 'fonts/baloo2-latin-ext.woff2', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));

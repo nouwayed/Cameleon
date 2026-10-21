@@ -5,7 +5,8 @@ Le projet iOS est déjà prêt dans le dossier `ios/`. Il est fabriqué avec **C
 - **de vraies vibrations** sur iPhone (bips du minuteur et alarme de fin) ;
 - **une notification « ⏰ Temps écoulé ! »** à la fin des 60 s, même si le téléphone posé face cachée s'est verrouillé ;
 - **le son même en mode silencieux**, sans couper la musique en cours ;
-- **une police intégrée** : l'application fonctionne sans internet et ne contacte aucun service extérieur.
+- **une police intégrée** : l'application fonctionne sans internet et ne contacte aucun service extérieur ;
+- **des missions inventées à partir d'une photo de la pièce**, avec une reconnaissance d'objets qui tourne sur le téléphone (la photo n'est jamais envoyée).
 
 ---
 
@@ -54,6 +55,7 @@ L'icône, l'écran de démarrage, le nom affiché (« Mission Caméléon »), l'
 - [ ] Le téléphone vibre aux bips et à la fin.
 - [ ] Mission lancée, **verrouille le téléphone** : au bout de 60 s, la notification « Temps écoulé » arrive.
 - [ ] En rouvrant l'application, l'écran « Détectives, revenez dans la pièce ! » est affiché.
+- [ ] Mode **Photo de la pièce** : l'appli demande l'accès à l'appareil photo, repère des objets (chaise, canapé, plante…) et propose une mission qui les utilise.
 
 ## 5. Créer la fiche sur App Store Connect
 
@@ -119,7 +121,7 @@ famille,enfants,jeu de société,cache-cache,observation,sans écran,parents,mai
 
 ### Confidentialité de l'app (« étiquette de confidentialité »)
 
-Réponds : **« Non, nous ne collectons pas de données à partir de cette app »**. C'est exact : tout reste sur l'appareil.
+Réponds : **« Non, nous ne collectons pas de données à partir de cette app »**. C'est exact : tout reste sur l'appareil, y compris les photos de la pièce, analysées sur le téléphone puis oubliées.
 
 ### Classification par âge
 
@@ -141,7 +143,9 @@ Mission Caméléon est un jeu de société familial joué dans la vraie vie. L'a
 
 Pour tester : ajoutez 2 prénoms, touchez « Lancer la partie », puis « Découvrir ma mission secrète ». Le bouton « J'ai fini avant la fin » permet de passer le minuteur.
 
-Fonctions natives utilisées : notification locale à la fin du minuteur (le téléphone est posé face cachée et peut se verrouiller), retour haptique, son en mode silencieux. Aucun compte, aucune donnée collectée, fonctionne hors ligne.
+Mode « Photo de la pièce » (choix « Quelles missions ? » sur le premier écran) : l'appareil photo sert à repérer les objets de la pièce, entièrement sur l'appareil (TensorFlow.js), pour inventer une mission. Aucune photo n'est envoyée ni enregistrée.
+
+Fonctions natives utilisées : appareil photo, notification locale à la fin du minuteur (le téléphone est posé face cachée et peut se verrouiller), retour haptique, son en mode silencieux. Aucun compte, aucune donnée collectée, fonctionne hors ligne.
 ```
 Aucun compte de démonstration n'est nécessaire.
 

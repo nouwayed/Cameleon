@@ -11,7 +11,8 @@ Jeu de société **dans la vraie vie** : le téléphone sert uniquement à donne
 5. À la fin, le téléphone sonne et vibre : les Détectives reviennent et cherchent ce qui a changé.
 6. **Un détective a trouvé !** → point pour ce détective. **Temps écoulé** → point pour le Caméléon.
 7. Tableau des scores, puis **Manche suivante**.
-8. Au départ, on choisit **1, 2 ou 3 tours** (un tour = chacun est Caméléon une fois). Après la dernière manche, **écran du vainqueur** avec podium, puis **Rejouer**.
+8. **Missions « Photo de la pièce »** (au choix) : le Caméléon photographie la pièce, l'appli repère les objets (chaise, canapé, plante, peluche, livre…) **directement sur le téléphone** et invente une mission avec eux. La photo n'est jamais envoyée ni enregistrée.
+9. Au départ, on choisit **1, 2 ou 3 tours** (un tour = chacun est Caméléon une fois). Après la dernière manche, **écran du vainqueur** avec podium, puis **Rejouer**.
 
 Les joueurs et les scores sont mémorisés sur l'appareil (localStorage) : aucun compte, aucune donnée envoyée.
 
@@ -41,6 +42,8 @@ npm run ios   # prépare www/, synchronise le projet iOS et ouvre Xcode (sur Mac
 | `index.html` | Page unique, styles d'animation |
 | `app.js` | Toute la logique : écrans, tirage du Caméléon, minuteur, sons (Web Audio), scores, banque de défis, fonctions natives iOS |
 | `tailwind.css` | Tailwind CSS compilé (fonctionne hors ligne) |
+| `photo.js` | Missions photo : catalogue d'objets en français, générateur de missions, reconnaissance d'objets |
+| `vendor/` | TensorFlow.js et le modèle COCO-SSD (SSDLite MobileNet v2), chargés seulement en mode photo |
 | `fonts/` | Police Baloo 2 embarquée (licence OFL) |
 | `manifest.webmanifest`, `sw.js`, `icon*.png`, `icon.svg` | Installation PWA et cache hors ligne |
 | `confidentialite.html` | Politique de confidentialité (exigée par Apple) |
@@ -55,6 +58,15 @@ Les classes Tailwind sont utilisées directement dans `index.html` et `app.js`. 
 ```bash
 npm install
 npm run build:css
+```
+
+## Ajouter des objets pour les missions photo
+
+Dans `photo.js`, le tableau `CATALOG` associe chaque objet reconnu (nom anglais du modèle COCO-SSD) à son nom français, son genre et ses missions. `{le}`, `{un}` et `{de}` sont remplacés par « la chaise », « une chaise », « de la chaise »… :
+
+```js
+'potted plant': { name: 'plante', g: 'f', emoji: '🪴', hide: true,
+  actions: ['Tourne {le} d\'un demi-tour.'] },
 ```
 
 ## Ajouter des défis
